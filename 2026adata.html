@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניתוח גרפי - תוצאות בחינה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222636;
+    --border: #2d3148;
+    --text: #e8eaf0;
+    --text-dim: #8b90a5;
+    --accent: #5b8def;
+    --accent2: #7c5bf5;
+    --green: #3ecf8e;
+    --amber: #f5a623;
+    --red: #ef5350;
+    --pink: #e75fa0;
+    --cyan: #4dd0e1;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    position: relative;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+  }
+
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: .3rem;
+  }
+
+  .header .subtitle {
+    font-size: 1.05rem;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .header .course-info {
+    font-size: .85rem;
+    color: var(--text-dim);
+    margin-top: .3rem;
+    opacity: .7;
+  }
+
+  /* KPI Row */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.2rem 1rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .kpi-card:nth-child(1)::before { background: var(--accent); }
+  .kpi-card:nth-child(2)::before { background: var(--green); }
+  .kpi-card:nth-child(3)::before { background: var(--amber); }
+  .kpi-card:nth-child(4)::before { background: var(--red); }
+  .kpi-card:nth-child(5)::before { background: var(--pink); }
+  .kpi-card:nth-child(6)::before { background: var(--cyan); }
+
+  .kpi-label {
+    font-size: .78rem;
+    color: var(--text-dim);
+    margin-bottom: .4rem;
+    font-weight: 500;
+  }
+
+  .kpi-value {
+    font-family: 'Rubik', sans-serif;
+    font-size: 1.9rem;
+    font-weight: 700;
+  }
+
+  .kpi-card:nth-child(1) .kpi-value { color: var(--accent); }
+  .kpi-card:nth-child(2) .kpi-value { color: var(--green); }
+  .kpi-card:nth-child(3) .kpi-value { color: var(--amber); }
+  .kpi-card:nth-child(4) .kpi-value { color: var(--red); }
+  .kpi-card:nth-child(5) .kpi-value { color: var(--pink); }
+  .kpi-card:nth-child(6) .kpi-value { color: var(--cyan); }
+
+  /* Charts Grid */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.4rem;
+  }
+
+  .chart-card.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .chart-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+
+  .chart-title .icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .85rem;
+  }
+
+  .chart-container {
+    position: relative;
+    width: 100%;
+  }
+
+  .chart-container canvas {
+    width: 100% !important;
+  }
+
+  /* Stats Table */
+  .stats-table-wrap {
+    overflow-x: auto;
+  }
+
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+  }
+
+  .stats-table th {
+    background: var(--surface2);
+    padding: .7rem .8rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-dim);
+    border-bottom: 2px solid var(--border);
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+
+  .stats-table td {
+    padding: .65rem .8rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Rubik', sans-serif;
+    font-weight: 500;
+  }
+
+  .stats-table tr:hover td {
+    background: rgba(91, 141, 239, .06);
+  }
+
+  .stats-table .row-label {
+    text-align: right;
+    font-family: 'Heebo', sans-serif;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Grade Distribution Legend */
+  .grade-legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: .8rem;
+    justify-content: center;
+  }
+
+  .grade-legend-item {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .75rem;
+    color: var(--text-dim);
+  }
+
+  .grade-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: .75rem;
+    color: var(--text-dim);
+    opacity: .6;
+  }
+
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .header h1 { font-size: 1.5rem; }
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>ניתוח גרפי — תוצאות בחינה</h1>
+  <div class="subtitle">המערכת הפיננסית ושוק ההון | קורס 13033</div>
+  <div class="course-info">מועד ב׳ — 04/02/2026 &nbsp;|&nbsp; 29 נבחנים &nbsp;|&nbsp; דר׳ שי צבאן</div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-label">ממוצע</div>
+    <div class="kpi-value">79.7</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">חציון</div>
+    <div class="kpi-value">81</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">מקסימום</div>
+    <div class="kpi-value">93</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">מינימום</div>
+    <div class="kpi-value">64</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">סטיית תקן</div>
+    <div class="kpi-value">7.92</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">נבחנים</div>
+    <div class="kpi-value">29</div>
+  </div>
+</div>
+
+<div class="charts-grid">
+
+  <!-- Histogram -->
+  <div class="chart-card">
+    <div class="chart-title">
+      <span class="icon" style="background:rgba(91,141,239,.15);color:var(--accent)">📊</span>
+      התפלגות ציונים סופיים
+    </div>
+    <div class="chart-container">
+      <canvas id="histogramChart" height="260"></canvas>
+    </div>
+  </div>
+
+  <!-- Pie / Doughnut - Grade Buckets -->
+  <div class="chart-card">
+    <div class="chart-title">
+      <span class="icon" style="background:rgba(62,207,142,.15);color:var(--green)">🎯</span>
+      פילוח לפי טווחי ציון
+    </div>
+    <div class="chart-container">
+      <canvas id="doughnutChart" height="260"></canvas>
+    </div>
+  </div>
+
+  <!-- Radar per question -->
+  <div class="chart-card">
+    <div class="chart-title">
+      <span class="icon" style="background:rgba(124,91,245,.15);color:var(--accent2)">🕸️</span>
+      ביצועים לפי שאלה (% מהניקוד המקסימלי)
+    </div>
+    <div class="chart-container">
+      <canvas id="radarChart" height="280"></canvas>
+    </div>
+  </div>
+
+  <!-- Bar chart per question stats -->
+  <div class="chart-card">
+    <div class="chart-title">
+      <span class="icon" style="background:rgba(245,166,35,.15);color:var(--amber)">📈</span>
+      ממוצע, מינימום ומקסימום לפי שאלה
+    </div>
+    <div class="chart-container">
+      <canvas id="questionBarChart" height="280"></canvas>
+    </div>
+  </div>
+
+  <!-- Box-like chart: all students sorted -->
+  <div class="chart-card full-width">
+    <div class="chart-title">
+      <span class="icon" style="background:rgba(231,95,160,.15);color:var(--pink)">📋</span>
+      ציונים סופיים — מהנמוך לגבוה
+    </div>
+    <div class="chart-container">
+      <canvas id="sortedGradesChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Stacked bar per student -->
+  <div class="chart-card full-width">
+    <div class="chart-title">
+      <span class="icon" style="background:rgba(77,208,225,.15);color:var(--cyan)">🔍</span>
+      הרכב ציון לפי שאלה — כל הסטודנטים
+    </div>
+    <div class="chart-container">
+      <canvas id="stackedChart" height="260"></canvas>
+    </div>
+  </div>
+
+  <!-- Summary Stats Table -->
+  <div class="chart-card full-width">
+    <div class="chart-title">
+      <span class="icon" style="background:rgba(91,141,239,.15);color:var(--accent)">📝</span>
+      סטטיסטיקה תיאורית לפי שאלה
+    </div>
+    <div class="stats-table-wrap">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>שאלה</th>
+            <th>ניקוד מקסימלי</th>
+            <th>ממוצע</th>
+            <th>חציון</th>
+            <th>מקסימום</th>
+            <th>מינימום</th>
+            <th>סטיית תקן</th>
+            <th>% מהניקוד</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="row-label">שאלה 1</td>
+            <td>15</td>
+            <td>11.72</td>
+            <td>12</td>
+            <td>15</td>
+            <td>5</td>
+            <td>2.16</td>
+            <td>78.1%</td>
+          </tr>
+          <tr>
+            <td class="row-label">שאלה 2</td>
+            <td>20</td>
+            <td>15.79</td>
+            <td>15</td>
+            <td>20</td>
+            <td>13</td>
+            <td>2.02</td>
+            <td>79.0%</td>
+          </tr>
+          <tr>
+            <td class="row-label">שאלה 3</td>
+            <td>25</td>
+            <td>19.83</td>
+            <td>20</td>
+            <td>23</td>
+            <td>15</td>
+            <td>2.42</td>
+            <td>79.3%</td>
+          </tr>
+          <tr>
+            <td class="row-label">שאלה 4</td>
+            <td>20</td>
+            <td>15.38</td>
+            <td>15</td>
+            <td>19</td>
+            <td>12</td>
+            <td>2.07</td>
+            <td>76.9%</td>
+          </tr>
+          <tr>
+            <td class="row-label">שאלה 5</td>
+            <td>20</td>
+            <td>17.00</td>
+            <td>17</td>
+            <td>20</td>
+            <td>12</td>
+            <td>2.29</td>
+            <td>85.0%</td>
+          </tr>
+          <tr style="background:var(--surface2); font-weight:700;">
+            <td class="row-label">סה״כ</td>
+            <td>100</td>
+            <td>79.72</td>
+            <td>81</td>
+            <td>93</td>
+            <td>64</td>
+            <td>7.92</td>
+            <td>79.7%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  ניתוח אוטומטי — המערכת הפיננסית ושוק ההון — מועד ב׳ 2026A
+</div>
+
+<script>
+const chartFont = { family: "'Rubik', 'Heebo', sans-serif" };
+Chart.defaults.font.family = "'Rubik', 'Heebo', sans-serif";
+Chart.defaults.color = '#8b90a5';
+
+const grades = [86,84,77,84,87,85,73,79,72,75,75,93,72,82,84,90,90,93,90,73,74,81,81,68,86,64,76,68,70];
+const q1 = [12,11,12,12,12,11,12,11,11,11,13,13,10,14,14,15,15,14,14,13,10,12,12,5,13,7,12,10,9];
+const q2 = [16,20,15,15,18,17,14,14,13,14,13,20,15,17,16,20,15,18,18,14,16,15,17,14,15,14,17,14,14];
+const q3 = [20,22,20,22,22,22,15,20,21,22,19,23,20,18,20,20,23,23,21,18,20,20,20,18,23,15,17,15,16];
+const q4 = [18,14,15,18,17,17,12,17,12,15,14,19,12,15,14,16,17,18,17,13,13,14,17,14,17,12,15,17,17];
+const q5 = [20,17,15,17,18,18,20,17,15,13,16,18,15,18,20,19,20,20,20,15,15,20,15,17,18,16,15,12,14];
+
+// Sorted grades
+const sortedGrades = [...grades].sort((a,b) => a-b);
+
+// --- Histogram ---
+const bins = [
+  { label: '60-64', min: 60, max: 64 },
+  { label: '65-69', min: 65, max: 69 },
+  { label: '70-74', min: 70, max: 74 },
+  { label: '75-79', min: 75, max: 79 },
+  { label: '80-84', min: 80, max: 84 },
+  { label: '85-89', min: 85, max: 89 },
+  { label: '90-94', min: 90, max: 94 },
+  { label: '95-100', min: 95, max: 100 }
+];
+
+const binCounts = bins.map(b => grades.filter(g => g >= b.min && g <= b.max).length);
+
+new Chart(document.getElementById('histogramChart'), {
+  type: 'bar',
+  data: {
+    labels: bins.map(b => b.label),
+    datasets: [{
+      data: binCounts,
+      backgroundColor: binCounts.map((_, i) => {
+        const colors = ['#ef5350','#f57c00','#ffa726','#ffee58','#66bb6a','#42a5f5','#5c6bc0','#7e57c2'];
+        return colors[i] + 'cc';
+      }),
+      borderColor: 'transparent',
+      borderRadius: 6,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        rtl: true,
+        callbacks: {
+          label: ctx => `${ctx.raw} סטודנטים`
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { stepSize: 1, font: { size: 11 } },
+        grid: { color: '#2d314822' },
+        title: { display: true, text: 'מספר סטודנטים', font: { size: 12 } }
+      },
+      x: {
+        grid: { display: false },
+        title: { display: true, text: 'טווח ציונים', font: { size: 12 } }
+      }
+    }
+  }
+});
+
+// --- Doughnut ---
+const gradeBuckets = [
+  { label: 'מצוין (90-100)', count: grades.filter(g => g >= 90).length, color: '#3ecf8e' },
+  { label: 'טוב מאוד (80-89)', count: grades.filter(g => g >= 80 && g < 90).length, color: '#5b8def' },
+  { label: 'טוב (70-79)', count: grades.filter(g => g >= 70 && g < 80).length, color: '#f5a623' },
+  { label: 'מספיק (60-69)', count: grades.filter(g => g >= 60 && g < 70).length, color: '#ef5350' },
+];
+
+new Chart(document.getElementById('doughnutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: gradeBuckets.map(b => b.label),
+    datasets: [{
+      data: gradeBuckets.map(b => b.count),
+      backgroundColor: gradeBuckets.map(b => b.color + 'dd'),
+      borderColor: '#1a1d27',
+      borderWidth: 3,
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '55%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        rtl: true,
+        labels: { padding: 14, usePointStyle: true, pointStyleWidth: 12, font: { size: 12 } }
+      },
+      tooltip: {
+        rtl: true,
+        callbacks: {
+          label: ctx => {
+            const pct = ((ctx.raw / 29) * 100).toFixed(1);
+            return ` ${ctx.raw} סטודנטים (${pct}%)`;
+          }
+        }
+      }
+    }
+  }
+});
+
+// --- Radar ---
+// Max points: Q1=15, Q2=20, Q3=25, Q4=20, Q5=20
+const maxPts = [15, 20, 25, 20, 20];
+const avgPct = [11.72/15*100, 15.79/20*100, 19.83/25*100, 15.38/20*100, 17/20*100];
+
+new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: {
+    labels: ['שאלה 1 (15 נק׳)', 'שאלה 2 (20 נק׳)', 'שאלה 3 (25 נק׳)', 'שאלה 4 (20 נק׳)', 'שאלה 5 (20 נק׳)'],
+    datasets: [{
+      label: 'ממוצע %',
+      data: avgPct,
+      backgroundColor: 'rgba(124,91,245,.2)',
+      borderColor: '#7c5bf5',
+      borderWidth: 2,
+      pointBackgroundColor: '#7c5bf5',
+      pointRadius: 5
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      r: {
+        beginAtZero: true,
+        max: 100,
+        ticks: { stepSize: 20, font: { size: 10 }, backdropColor: 'transparent' },
+        grid: { color: '#2d314844' },
+        angleLines: { color: '#2d314844' },
+        pointLabels: { font: { size: 11 } }
+      }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        rtl: true,
+        callbacks: {
+          label: ctx => `${ctx.raw.toFixed(1)}%`
+        }
+      }
+    }
+  }
+});
+
+// --- Question Bar Chart ---
+new Chart(document.getElementById('questionBarChart'), {
+  type: 'bar',
+  data: {
+    labels: ['שאלה 1', 'שאלה 2', 'שאלה 3', 'שאלה 4', 'שאלה 5'],
+    datasets: [
+      {
+        label: 'מקסימום',
+        data: [15, 20, 23, 19, 20],
+        backgroundColor: '#3ecf8e99',
+        borderRadius: 4
+      },
+      {
+        label: 'ממוצע',
+        data: [11.72, 15.79, 19.83, 15.38, 17],
+        backgroundColor: '#5b8defbb',
+        borderRadius: 4
+      },
+      {
+        label: 'מינימום',
+        data: [5, 13, 15, 12, 12],
+        backgroundColor: '#ef535099',
+        borderRadius: 4
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        rtl: true,
+        labels: { usePointStyle: true, pointStyleWidth: 12, font: { size: 11 }, padding: 14 }
+      },
+      tooltip: { rtl: true }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: '#2d314822' },
+        title: { display: true, text: 'ניקוד', font: { size: 12 } }
+      },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// --- Sorted Grades ---
+const gradeColors = sortedGrades.map(g => {
+  if (g >= 90) return '#3ecf8edd';
+  if (g >= 80) return '#5b8defdd';
+  if (g >= 70) return '#f5a623dd';
+  return '#ef5350dd';
+});
+
+new Chart(document.getElementById('sortedGradesChart'), {
+  type: 'bar',
+  data: {
+    labels: sortedGrades.map((_, i) => `#${i+1}`),
+    datasets: [{
+      data: sortedGrades,
+      backgroundColor: gradeColors,
+      borderRadius: 4,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        rtl: true,
+        callbacks: {
+          label: ctx => `ציון: ${ctx.raw}`
+        }
+      }
+    },
+    scales: {
+      y: {
+        min: 55,
+        grid: { color: '#2d314822' },
+        title: { display: true, text: 'ציון', font: { size: 12 } }
+      },
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 9 } }
+      }
+    }
+  }
+});
+
+// --- Stacked Bar ---
+const studentLabels = Array.from({length: 29}, (_, i) => `${i+1}`);
+// sort students by total grade desc
+const indices = grades.map((g, i) => i).sort((a, b) => grades[b] - grades[a]);
+
+new Chart(document.getElementById('stackedChart'), {
+  type: 'bar',
+  data: {
+    labels: indices.map((_, i) => `סטודנט ${i+1}`),
+    datasets: [
+      { label: 'שאלה 1', data: indices.map(i => q1[i]), backgroundColor: '#5b8defcc', borderRadius: 2 },
+      { label: 'שאלה 2', data: indices.map(i => q2[i]), backgroundColor: '#7c5bf5cc', borderRadius: 2 },
+      { label: 'שאלה 3', data: indices.map(i => q3[i]), backgroundColor: '#3ecf8ecc', borderRadius: 2 },
+      { label: 'שאלה 4', data: indices.map(i => q4[i]), backgroundColor: '#f5a623cc', borderRadius: 2 },
+      { label: 'שאלה 5', data: indices.map(i => q5[i]), backgroundColor: '#e75fa0cc', borderRadius: 2 }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        rtl: true,
+        labels: { usePointStyle: true, pointStyleWidth: 12, font: { size: 11 }, padding: 12 }
+      },
+      tooltip: {
+        rtl: true,
+        callbacks: {
+          afterTitle: ctxArr => `ציון סופי: ${grades[indices[ctxArr[0].dataIndex]]}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        stacked: true,
+        grid: { display: false },
+        ticks: { font: { size: 9 } }
+      },
+      y: {
+        stacked: true,
+        grid: { color: '#2d314822' },
+        title: { display: true, text: 'ציון מצטבר', font: { size: 12 } }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
